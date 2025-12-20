@@ -1,11 +1,13 @@
 from rest_framework import viewsets
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from .models import Song
 from .serializers import SongSerializer
 
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def api_root(request, format=None):
     """
     Punto de entrada de la API de PresNova
@@ -23,8 +25,10 @@ class SongViewSet(viewsets.ModelViewSet):
     Permite listar, crear, recuperar, actualizar y eliminar canciones.
     Las secciones de las canciones se incluyen anidadas en la respuesta.
     Soporta creación y actualización de canciones con sus secciones en una sola petición.
+    Requiere autenticación.
     """
     serializer_class = SongSerializer
+    permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
         """

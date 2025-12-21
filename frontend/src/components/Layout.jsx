@@ -1,9 +1,17 @@
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 
 function Layout({ children }) {
   const location = useLocation()
+  const navigate = useNavigate()
+  const { logout, user } = useAuth()
 
   const isActive = (path) => location.pathname === path
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login')
+  }
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
@@ -15,7 +23,7 @@ function Layout({ children }) {
                 PresNova
               </Link>
             </div>
-            <div className="flex space-x-4">
+            <div className="flex items-center space-x-4">
               <Link
                 to="/operator"
                 className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
@@ -26,26 +34,18 @@ function Layout({ children }) {
               >
                 Operador
               </Link>
-              <Link
-                to="/output"
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  isActive('/output') 
-                    ? 'bg-gray-700 text-white' 
-                    : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                }`}
-              >
-                Salida
-              </Link>
-              <Link
-                to="/stage"
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  isActive('/stage') 
-                    ? 'bg-gray-700 text-white' 
-                    : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                }`}
-              >
-                Escenario
-              </Link>
+              {/* Output and Stage are controlled from the Operator; remove top-level navigation to avoid operator leaving the control view */}
+              {user && (
+                <div className="flex items-center space-x-3 ml-4 pl-4 border-l border-gray-700">
+                  <span className="text-sm text-gray-400">{user.username}</span>
+                  <button
+                    onClick={handleLogout}
+                    className="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

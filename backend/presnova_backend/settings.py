@@ -6,10 +6,12 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load .env from backend directory (if present). This ensures BIBLE_API_KEY and other env vars are available.
+dotenv_path = BASE_DIR / '.env'
+load_dotenv(dotenv_path=dotenv_path)
 
 
 # Quick-start development settings - unsuitable for production
@@ -151,4 +153,7 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 CORS_ALLOW_CREDENTIALS = True
+
+# Bible API key (must be provided via environment)
+BIBLE_API_KEY = os.getenv('BIBLE_API_KEY')
 

@@ -1,4 +1,4 @@
-import { SongSection } from '../../api/client'
+import { SongSection, setPresentationState } from '../../api/client'
 import { usePresentation } from '../../context/PresentationContext'
 
 interface SongSlidesGridProps {
@@ -38,6 +38,16 @@ function SongSlidesGrid({ sections }: SongSlidesGridProps) {
            activeSlide.order === section.order
   }
 
+  const handleClick = async (section: SongSection) => {
+    try {
+      console.log('[Operator] set presentation state, section_id=', section.id)
+      await setPresentationState(section.id as number)
+      // Do not set local activeSlide here; PresentationContext polls backend and will update preview/output
+    } catch (err) {
+      console.error('Error setting presentation state:', err)
+    }
+  }
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
       {sections.map((section) => {
@@ -45,7 +55,7 @@ function SongSlidesGrid({ sections }: SongSlidesGridProps) {
         return (
           <div
             key={section.id}
-            onClick={() => setActiveSlide(section)}
+            onClick={() => handleClick(section)}
             className={`bg-slate-800 rounded-lg p-4 border flex flex-col cursor-pointer transition-all ${
               slideIsActive
                 ? 'border-blue-500 border-2 shadow-lg shadow-blue-500/50'

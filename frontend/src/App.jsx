@@ -1,11 +1,14 @@
 import AppRouter from './router/AppRouter'
 import { PresentationProvider } from './context/PresentationContext'
+import { AuthProvider } from './context/AuthContext'
 
 function App() {
   return (
-    <PresentationProvider>
-      <AppRouter />
-    </PresentationProvider>
+    <AuthProvider>
+      <PresentationProvider>
+        <AppRouter />
+      </PresentationProvider>
+    </AuthProvider>
   )
 }
 

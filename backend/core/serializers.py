@@ -1,11 +1,15 @@
 from rest_framework import serializers
-from .models import Song, SongSection
+from .models import Song, SongSection, PresentationState
 
 
 class SongSectionSerializer(serializers.ModelSerializer):
     class Meta:
         model = SongSection
-        fields = ['id', 'section_type', 'order', 'text']
+        fields = [
+            'id', 'section_type', 'order', 'text',
+            'bible_version', 'bible_book', 'bible_chapter', 'bible_verse_start', 'bible_verse_end',
+            'song'
+        ]
         extra_kwargs = {
             'id': {'read_only': False, 'required': False}
         }
@@ -72,4 +76,46 @@ class SongSerializer(serializers.ModelSerializer):
                     SongSection.objects.create(song=instance, **section_data)
         
         return instance
+
+
+class SectionDisplaySerializer(serializers.ModelSerializer):
+    """Serializer de solo lectura para mostrar slides en Output/Stage."""
+    song_id = serializers.SerializerMethodField()
+    song_title = serializers.SerializerMethodField()
+    bible_reference = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SongSection
+        fields = ['id', 'song_id', 'song_title', 'section_type', 'order', 'text', 'bible_reference']
+        read_only_fields = ['id', 'song_id', 'song_title', 'section_type', 'order', 'text']
+
+    def get_song_id(self, obj):
+        return obj.song.id if obj.song else None
+
+    def get_song_title(self, obj):
+        return obj.song.title if obj.song else None
+
+    def get_bible_reference(self, obj):
+        if obj.section_type == 'bible':
+            start = obj.bible_verse_start or ''
+            end = obj.bible_verse_end or ''
+            if end and end != start:
+                verses = f"{start}-{end}"
+            else:
+                verses = f"{start}" if start else ''
+            return {
+                'version': obj.bible_version,
+                'book': obj.bible_book,
+                'chapter': obj.bible_chapter,
+                'verses': verses,
+            }
+        return None
+
+
+class PresentationStateSerializer(serializers.ModelSerializer):
+    """Serializer para PresentationState que expone song y section IDs."""
+    class Meta:
+        model = PresentationState
+        fields = ['id', 'active_song', 'active_section', 'updated_at']
+        read_only_fields = ['id', 'updated_at']
 

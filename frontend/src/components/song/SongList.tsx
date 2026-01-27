@@ -10,7 +10,7 @@ function SongList({ songs, onSongSelect, selectedSongId }: SongListProps) {
   // Validar que songs sea un array
   if (!Array.isArray(songs)) {
     return (
-      <div className="text-gray-500 text-center py-8">
+      <div className="text-muted text-center py-8">
         <p>Error: formato de datos inválido</p>
       </div>
     )
@@ -18,7 +18,7 @@ function SongList({ songs, onSongSelect, selectedSongId }: SongListProps) {
 
   if (songs.length === 0) {
     return (
-      <div className="text-gray-500 text-center py-8">
+      <div className="text-muted text-center py-8">
         <p>No hay canciones disponibles</p>
       </div>
     )
@@ -32,8 +32,8 @@ function SongList({ songs, onSongSelect, selectedSongId }: SongListProps) {
           onClick={() => onSongSelect?.(song)}
           className={`p-4 rounded-lg cursor-pointer transition-colors ${
             selectedSongId === song.id
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+              ? 'bg-brand-primary text-bg-app'
+              : 'bg-surface-2 hover:bg-surface-3 text-secondary'
           }`}
         >
           <h3 className="font-semibold text-lg">{song.title || 'Sin título'}</h3>

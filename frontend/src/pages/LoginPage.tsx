@@ -27,15 +27,15 @@ function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+    <div className="min-h-screen bg-app flex items-center justify-center">
       <div className="w-full max-w-md">
-        <div className="bg-gray-800 rounded-lg p-8 border border-gray-700">
+        <div className="bg-surface-1 rounded-lg p-8 border border-subtle">
           <h1 className="text-3xl font-bold text-white mb-2 text-center">PresNova</h1>
-          <p className="text-gray-400 text-center mb-6">Iniciar sesión</p>
+          <p className="text-secondary text-center mb-6">Iniciar sesión</p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-300 mb-1">
+              <label htmlFor="username" className="block text-sm font-medium text-secondary mb-1">
                 Usuario
               </label>
               <input
@@ -45,14 +45,14 @@ function LoginPage() {
                 onChange={(e) => setUsername(e.target.value)}
                 required
                 disabled={loading}
-                className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:border-blue-500 disabled:bg-gray-600 disabled:cursor-not-allowed"
+                className="w-full px-3 py-2 bg-surface-2 text-white rounded-lg border border-subtle focus:outline-none focus:border-brand-primary disabled:bg-surface-2 disabled:cursor-not-allowed transition-colors"
                 placeholder="Nombre de usuario"
                 autoComplete="username"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-1">
+              <label htmlFor="password" className="block text-sm font-medium text-secondary mb-1">
                 Contraseña
               </label>
               <input
@@ -62,14 +62,14 @@ function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={loading}
-                className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:border-blue-500 disabled:bg-gray-600 disabled:cursor-not-allowed"
+                className="w-full px-3 py-2 bg-surface-2 text-white rounded-lg border border-subtle focus:outline-none focus:border-brand-primary disabled:bg-surface-2 disabled:cursor-not-allowed transition-colors"
                 placeholder="Contraseña"
                 autoComplete="current-password"
               />
             </div>
 
             {error && (
-              <div className="bg-red-900/50 border border-red-700 rounded-lg p-3 text-red-200">
+              <div className="bg-status-error/20 border border-status-error rounded-lg p-3 text-status-error">
                 <p className="text-sm">{error}</p>
               </div>
             )}
@@ -77,7 +77,7 @@ function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors font-medium"
+              className="w-full px-4 py-2 bg-brand-primary text-bg-app rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity font-medium"
             >
               {loading ? 'Ingresando...' : 'Ingresar'}
             </button>

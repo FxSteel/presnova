@@ -11,7 +11,7 @@ function SongSlidesGrid({ sections }: SongSlidesGridProps) {
   // Validar que sections sea un array y no esté vacío
   if (!sections || !Array.isArray(sections) || sections.length === 0) {
     return (
-      <div className="text-center text-gray-500 py-12">
+      <div className="text-center text-muted py-12">
         <p className="text-lg">Esta canción aún no tiene slides configurados.</p>
       </div>
     )
@@ -56,18 +56,18 @@ function SongSlidesGrid({ sections }: SongSlidesGridProps) {
           <div
             key={section.id}
             onClick={() => handleClick(section)}
-            className={`bg-slate-800 rounded-lg p-4 border flex flex-col cursor-pointer transition-all ${
+            className={`bg-surface-1 rounded-lg p-4 border flex flex-col cursor-pointer transition-all ${
               slideIsActive
-                ? 'border-blue-500 border-2 shadow-lg shadow-blue-500/50'
-                : 'border-slate-700 hover:border-slate-600'
+                ? 'border-brand-primary border-2 shadow-lg shadow-brand-primary/50'
+                : 'border-subtle hover:border-medium'
             }`}
           >
             {/* Pill con el tipo de sección */}
             <div className="mb-3">
               <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
                 slideIsActive
-                  ? 'bg-blue-600 text-white'
-                  : 'text-white bg-slate-700'
+                  ? 'bg-brand-primary text-bg-app'
+                  : 'text-white bg-surface-2'
               }`}>
                 {getSectionTypeLabel(section.section_type)}
               </span>

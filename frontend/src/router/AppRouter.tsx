@@ -1,10 +1,11 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
-import Layout from '../components/Layout'
+import AppShell from '../components/layout/AppShell'
 import ProtectedRoute from '../components/ProtectedRoute'
 import LoginPage from '../pages/LoginPage'
 import OperatorPage from '../pages/OperatorPage'
 import OutputPage from '../pages/OutputPage'
 import StagePage from '../pages/StagePage'
+import SettingsPage from '../pages/SettingsPage'
 import { useAuth } from '../context/AuthContext'
 
 function AppRouter() {
@@ -23,32 +24,24 @@ function AppRouter() {
           )
         }
       />
+      {/* Protected routes with sidebar */}
       <Route
-        path="/operator"
         element={
           <ProtectedRoute>
-            <Layout>
-              <OperatorPage />
-            </Layout>
+            <AppShell />
           </ProtectedRoute>
         }
-      />
+      >
+        <Route path="/operator" element={<OperatorPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/stage" element={<StagePage />} />
+      </Route>
+      {/* Output is a full-screen view without sidebar */}
       <Route
         path="/output"
         element={
           <ProtectedRoute>
-            {/* Output must be a dedicated full-screen view without the operator layout */}
             <OutputPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/stage"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <StagePage />
-            </Layout>
           </ProtectedRoute>
         }
       />

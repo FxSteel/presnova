@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
+import { Pencil, Trash2 } from 'lucide-react'
 import { getSongs, Song, deleteSong, fetchWithAuth } from '../api/client'
 import SongList from '../components/song/SongList'
 import SongSlidesGrid from '../components/song/SongSlidesGrid'
@@ -171,6 +172,8 @@ function OperatorPage() {
     }
   }
 
+  const [bibliasHoverTooltip, setBibliasHoverTooltip] = useState(false)
+
   return (
     <div className="h-full flex gap-4">
       {/* Sidebar con lista de canciones / biblias */}
@@ -179,16 +182,25 @@ function OperatorPage() {
         <div className="mb-4 flex items-center gap-2">
           <button
             onClick={() => setLeftTab('songs')}
-            className={`px-3 py-1 rounded-l-md text-sm font-medium ${leftTab === 'songs' ? 'bg-surface-2 text-white' : 'bg-surface-1 text-secondary hover:bg-surface-2'}`}
+            className={`px-3 py-1 rounded-l-md text-sm font-medium transition-colors ${leftTab === 'songs' ? 'bg-surface-2 text-white' : 'bg-surface-1 text-secondary hover:bg-surface-2'}`}
           >
             Canciones
           </button>
-          <button
-            onClick={() => setLeftTab('bibles')}
-            className={`px-3 py-1 rounded-r-md text-sm font-medium ${leftTab === 'bibles' ? 'bg-surface-2 text-white' : 'bg-surface-1 text-secondary hover:bg-surface-2'}`}
-          >
-            Biblias
-          </button>
+          <div className="relative">
+            <button
+              disabled
+              onMouseEnter={() => setBibliasHoverTooltip(true)}
+              onMouseLeave={() => setBibliasHoverTooltip(false)}
+              className={`px-3 py-1 rounded-r-md text-sm font-medium cursor-not-allowed opacity-50 ${leftTab === 'bibles' ? 'bg-surface-2 text-white' : 'bg-surface-1 text-secondary'}`}
+            >
+              Biblias
+            </button>
+            {bibliasHoverTooltip && (
+              <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-surface-2 text-text-primary text-xs px-2 py-1 rounded whitespace-nowrap pointer-events-none z-50 border border-subtle">
+                Feature próximamente
+              </div>
+            )}
+          </div>
         </div>
 
         {leftTab === 'songs' ? (
@@ -285,15 +297,17 @@ function OperatorPage() {
                   <div className="flex gap-2">
                     <button
                       onClick={() => setIsEditingSlides(true)}
-                      className="px-4 py-2 bg-brand-primary text-bg-app rounded-lg hover:opacity-90 transition-opacity"
+                      className="flex items-center gap-2 px-3 py-2 bg-brand-primary text-bg-app rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
                     >
+                      <Pencil size={16} />
                       Editar slides
                     </button>
                     <button
                       onClick={() => setShowDeleteConfirm(true)}
                       disabled={isDeleting}
-                      className="px-4 py-2 bg-status-error text-white rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+                      className="flex items-center gap-2 px-3 py-2 bg-status-error text-white rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
                     >
+                      <Trash2 size={16} />
                       Eliminar canción
                     </button>
                   </div>
@@ -363,7 +377,7 @@ function OperatorPage() {
       </div>
 
       {/* Right column: Output Preview + Projection controls */}
-      <div className="w-[480px] bg-surface-1 rounded-lg p-4 flex flex-col gap-4">
+      <div className="flex-shrink-0 w-[480px] bg-surface-1 rounded-lg p-4 flex flex-col gap-4">
         <div className="mb-0 flex items-center justify-between">
           <h3 className="text-lg font-bold text-white">Output Preview</h3>
           <div className="flex items-center gap-2">

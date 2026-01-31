@@ -50,19 +50,20 @@ function SongSlidesGrid({ sections }: SongSlidesGridProps) {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
-      {sections.map((section) => {
+      {sections.map((section, index) => {
         const slideIsActive = isActive(section)
+        const slideNumber = index + 1
         return (
           <div
             key={section.id}
             onClick={() => handleClick(section)}
-            className={`bg-surface-1 rounded-lg p-4 border flex flex-col cursor-pointer transition-all ${
+            className={`bg-surface-1 rounded-lg p-4 border flex flex-col cursor-pointer transition-all relative min-h-[120px] ${
               slideIsActive
                 ? 'border-brand-primary border-2 shadow-lg shadow-brand-primary/50'
                 : 'border-subtle hover:border-medium'
             }`}
           >
-            {/* Pill con el tipo de sección */}
+            {/* Badge tipo - esquina superior izquierda */}
             <div className="mb-3">
               <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
                 slideIsActive
@@ -72,10 +73,21 @@ function SongSlidesGrid({ sections }: SongSlidesGridProps) {
                 {getSectionTypeLabel(section.section_type)}
               </span>
             </div>
+
+            {/* Badge número - esquina superior derecha */}
+            <div className="absolute top-4 right-4">
+              <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                slideIsActive
+                  ? 'bg-brand-primary text-bg-app'
+                  : 'bg-surface-2 text-text-secondary'
+              }`}>
+                #{slideNumber}
+              </span>
+            </div>
             
             {/* Texto de la sección */}
-            <div className="flex-1">
-              <p className="text-white whitespace-pre-wrap break-words">
+            <div className="flex-1 pr-12 min-w-0">
+              <p className="text-white whitespace-pre-wrap break-words text-sm line-clamp-4">
                 {section.text || '(Sin texto)'}
               </p>
             </div>

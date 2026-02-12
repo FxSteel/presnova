@@ -4,6 +4,7 @@ import { useAuth } from '@/app/providers'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Sidebar from '@/components/layout/Sidebar'
+import { WorkspaceGate } from '@/components/WorkspaceGate'
 
 export default function AppLayout({
   children,
@@ -27,11 +28,7 @@ export default function AppLayout({
   }, [session, loading, router, mounted])
 
   if (!mounted || loading) {
-    return (
-      <div className="min-h-screen bg-[#0f0f0f] flex items-center justify-center">
-        <div className="text-gray-400">Cargando...</div>
-      </div>
-    )
+    return null
   }
 
   if (!session) {
@@ -39,11 +36,13 @@ export default function AppLayout({
   }
 
   return (
-    <div className="flex h-screen bg-[#0f0f0f]">
-      <Sidebar />
-      <main className="flex-1 overflow-hidden">
-        {children}
-      </main>
-    </div>
+    <WorkspaceGate>
+      <div className="flex h-screen bg-[#0f0f0f]">
+        <Sidebar />
+        <main className="flex-1 overflow-hidden">
+          {children}
+        </main>
+      </div>
+    </WorkspaceGate>
   )
 }

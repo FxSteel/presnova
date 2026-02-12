@@ -1,40 +1,26 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useAuth } from '@/app/providers'
-import { useAppStore, Song, SongSlide } from '@/lib/store'
-import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import { useAppStore, Song, SongSlide } from '@/lib/store'
+import { useWorkspaceStore } from '@/lib/workspace-store'
+import { supabase } from '@/lib/supabase'
 import SongsList from '@/components/operator/SongsList'
 import SongDetail from '@/components/operator/SongDetail'
 import OutputPreview from '@/components/operator/OutputPreview'
 
 export default function OperatorPage() {
-  const { activeWorkspace, user, session, loading } = useAuth()
   const router = useRouter()
+  const { activeWorkspaceId } = useWorkspaceStore()
   const { selectedSong, setSelectedSong } = useAppStore()
   const [songs, setSongs] = useState<Song[]>([])
   const [slides, setSlides] = useState<SongSlide[]>([])
   const [pageLoading, setPageLoading] = useState(true)
   const [error, setError] = useState('')
 
-  // Protect route - redirect if no session
+  // Fetch songs when workspace changes
   useEffect(() => {
-    if (!loading && !session) {
-      console.log('[OPERATOR] No session, redirecting to login')
-      router.replace('/auth/login')
-    }
-  }, [session, loading, router])
-
-  // Hide loading once session is confirmed
-  useEffect(() => {
-    if (!loading) {
-      setPageLoading(false)
-    }
-  }, [loading])
-
-  useEffect(() => {
-    if (!activeWorkspace) return
+    if (!activeWorkspaceId) return
 
     const fetchSongs = async () => {
       try {
@@ -42,7 +28,7 @@ export default function OperatorPage() {
         const { data, error: err } = await supabase
           .from('songs')
           .select('*')
-          .eq('workspace_id', activeWorkspace.id)
+          .eq('workspace_id', activeWorkspaceId)
           .eq('is_archived', false)
           .order('created_at', { ascending: false })
 
@@ -56,7 +42,7 @@ export default function OperatorPage() {
     }
 
     fetchSongs()
-  }, [activeWorkspace])
+  }, [activeWorkspaceId])
 
   useEffect(() => {
     if (!selectedSong) {
@@ -121,10 +107,8 @@ export default function OperatorPage() {
     setSlides(slides.filter((s) => s.id !== slideId))
   }
 
-  if (!session) return null
-
   // Show loading skeleton while workspace is loading
-  if (pageLoading && !activeWorkspace) {
+  if (pageLoading && !activeWorkspaceId) {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="text-center">
@@ -139,7 +123,7 @@ export default function OperatorPage() {
   }
 
   // No workspace found after loading
-  if (!activeWorkspace) {
+  if (!activeWorkspaceId) {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="text-center max-w-md">
@@ -183,7 +167,7 @@ export default function OperatorPage() {
           onSelectSong={handleSongSelect}
           onSongCreated={handleSongCreated}
           loading={pageLoading}
-          workspaceId={activeWorkspace?.id || ''}
+          workspaceId={activeWorkspaceId || ''}
         />
       </div>
 
@@ -198,7 +182,7 @@ export default function OperatorPage() {
             onSlideCreated={handleSlideCreated}
             onSlideUpdated={handleSlideUpdated}
             onSlideDeleted={handleSlideDeleted}
-            workspaceId={activeWorkspace?.id || ''}
+            workspaceId={activeWorkspaceId || ''}
           />
         ) : (
           <div className="flex items-center justify-center h-full text-gray-400">

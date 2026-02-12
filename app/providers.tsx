@@ -24,7 +24,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
   const [activeWorkspace, setActiveWorkspaceState] = useState<Workspace | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false) // Start as false to avoid infinite loading
 
   const storeSetUser = useAppStore((state) => state.setUser)
   const storeSetActiveWorkspace = useAppStore((state) => state.setActiveWorkspace)
@@ -43,59 +43,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (session?.user) {
+          // Immediately mark loading as false once we have a session
+          if (isMounted) {
+            setLoading(false)
+          }
+
+          // Load user data in background (don't block on this)
           try {
             // Get auth token for API calls
             const { data: { session: currentSession } } = await supabase.auth.getSession()
             const token = currentSession?.access_token
 
-            // Fetch profile and workspaces in PARALLEL
-            const [profileResult, workspacesResult] = await Promise.allSettled([
-              supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', session.user.id)
-                .single(),
-              token ? fetch('/api/auth/workspaces', {
-                headers: { 'Authorization': `Bearer ${token}` },
-              }).then(r => r.json()) : Promise.resolve({ workspaces: [] })
-            ])
+            // Fetch profile
+            const { data: profileData, error: profileError } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', session.user.id)
+              .single()
 
-            if (!isMounted) return
-
-            // Handle profile
-            if (profileResult.status === 'fulfilled') {
-              const profileData = profileResult.value?.data
-              if (profileData) {
-                setUser(profileData)
-                storeSetUser(profileData)
-              }
-            } else if (profileResult.status === 'rejected') {
-              console.error('[AUTH] Profile fetch failed:', profileResult.reason)
+            if (isMounted && !profileError && profileData) {
+              setUser(profileData)
+              storeSetUser(profileData)
             }
 
-            // Handle workspaces
-            if (workspacesResult.status === 'fulfilled') {
-              const { workspaces } = workspacesResult.value || {}
-              if (workspaces && workspaces.length > 0) {
-                setWorkspaces(workspaces)
-                const owned = workspaces.find((w: Workspace) => w.owner_id === session.user.id) || workspaces[0]
-                setActiveWorkspaceState(owned)
-                storeSetActiveWorkspace(owned)
-              } else {
-                setWorkspaces([])
-                setActiveWorkspaceState(null)
+            // Fetch workspaces
+            if (token && isMounted) {
+              const response = await fetch('/api/auth/workspaces', {
+                headers: { 'Authorization': `Bearer ${token}` },
+              })
+
+              if (response.ok) {
+                const { workspaces } = await response.json()
+                if (isMounted && workspaces && workspaces.length > 0) {
+                  setWorkspaces(workspaces)
+                  const owned = workspaces.find((w: Workspace) => w.owner_id === session.user.id) || workspaces[0]
+                  setActiveWorkspaceState(owned)
+                  storeSetActiveWorkspace(owned)
+                }
               }
-            } else if (workspacesResult.status === 'rejected') {
-              console.error('[AUTH] Workspaces fetch failed:', workspacesResult.reason)
-              setWorkspaces([])
-              setActiveWorkspaceState(null)
             }
           } catch (error) {
             console.error('[AUTH] Error loading user data:', error)
-          } finally {
-            if (isMounted) {
-              setLoading(false)
-            }
           }
         } else {
           // No session
@@ -118,11 +106,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
-    if (error) throw error
+    console.log('[AUTH] Attempting sign in...')
+    
+    try {
+      const signInPromise = supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+
+      // Add 15 second timeout
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(
+          () => reject(new Error('Sign in timeout - please check your connection')),
+          15000
+        )
+      )
+
+      const { error } = await Promise.race([signInPromise, timeoutPromise]) as any
+      
+      if (error) {
+        console.error('[AUTH] Sign in error:', error)
+        throw error
+      }
+      
+      console.log('[AUTH] Sign in successful')
+    } catch (err) {
+      console.error('[AUTH] Sign in failed:', err)
+      throw err
+    }
   }
 
   const signUp = async (email: string, password: string, fullName: string) => {

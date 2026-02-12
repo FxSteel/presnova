@@ -29,16 +29,23 @@ export default function LoginPage() {
           return
         }
         setLoadingStep('Creando cuenta...')
+        console.log('[LOGIN] Starting sign up...')
         await signUp(email, password, fullName)
+        console.log('[LOGIN] Sign up completed, setting up workspace...')
         setLoadingStep('Configurando workspace...')
-        // Give a moment for the workspace to be created
         await new Promise((resolve) => setTimeout(resolve, 1000))
       } else {
         setLoadingStep('Iniciando sesión...')
+        console.log('[LOGIN] Starting sign in with:', email)
         await signIn(email, password)
+        console.log('[LOGIN] Sign in completed, waiting for sync...')
+        // Give auth state change listener time to update session
+        await new Promise((resolve) => setTimeout(resolve, 500))
       }
+      console.log('[LOGIN] Redirecting to operator...')
       router.push('/operator')
     } catch (err: any) {
+      console.error('[LOGIN] Error:', err)
       setError(err.message || 'Error de autenticación')
       setLoadingStep('')
     } finally {

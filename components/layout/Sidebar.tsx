@@ -3,15 +3,15 @@
 import { useState } from 'react'
 import { useAuth } from '@/app/providers'
 import { useRouter, usePathname } from 'next/navigation'
-import { ChevronDown, CircleUser, Home, Users, Zap, Lightbulb, Settings, LogOut } from 'lucide-react'
+import { CircleUser, ChevronDown, Home, Users, Zap, Lightbulb, Settings, LogOut } from 'lucide-react'
 import Link from 'next/link'
+import { WorkspaceSwitcher } from '@/components/WorkspaceSwitcher'
 
 export default function Sidebar() {
-  const { user, activeWorkspace, workspaces, setActiveWorkspace, signOut } = useAuth()
+  const { user, signOut } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
   const [showUserMenu, setShowUserMenu] = useState(false)
-  const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false)
 
   const handleSignOut = async () => {
     setShowUserMenu(false)
@@ -31,41 +31,9 @@ export default function Sidebar() {
 
   return (
     <div className="w-64 bg-[#1a1a1a] border-r border-[#333] flex flex-col overflow-hidden">
-      {/* Workspace Selector */}
+      {/* Workspace Switcher */}
       <div className="p-4 border-b border-[#333]">
-        <div className="relative">
-          <button
-            onClick={() => setShowWorkspaceMenu(!showWorkspaceMenu)}
-            className="w-full flex items-center justify-between p-3 bg-[#2a2a2a] hover:bg-[#333] rounded transition-colors text-sm"
-          >
-            <div className="text-left">
-              <div className="text-xs text-gray-400">Espacio de trabajo</div>
-              <div className="font-medium text-white truncate">{activeWorkspace?.name || 'No workspace'}</div>
-            </div>
-            <ChevronDown size={16} className={`transition-transform ${showWorkspaceMenu ? 'rotate-180' : ''}`} />
-          </button>
-
-          {showWorkspaceMenu && workspaces.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-[#2a2a2a] border border-[#333] rounded shadow-lg z-10">
-              {workspaces.map((ws) => (
-                <button
-                  key={ws.id}
-                  onClick={() => {
-                    setActiveWorkspace(ws)
-                    setShowWorkspaceMenu(false)
-                  }}
-                  className={`w-full text-left px-3 py-2 text-sm transition-colors ${
-                    activeWorkspace?.id === ws.id
-                      ? 'bg-[#7C6FD8] text-white'
-                      : 'text-gray-300 hover:bg-[#333]'
-                  }`}
-                >
-                  {ws.name}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <WorkspaceSwitcher />
       </div>
 
       {/* Navigation */}

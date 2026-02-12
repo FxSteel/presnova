@@ -1,10 +1,12 @@
 import { createClient } from '@supabase/supabase-js'
+import { jwtDecode } from 'jwt-decode'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(req: NextRequest) {
   try {
     const authHeader = req.headers.get('authorization')
     if (!authHeader) {
+      console.error('[WORKSPACES] Missing authorization header')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -16,25 +18,42 @@ export async function GET(req: NextRequest) {
 
     const token = authHeader.replace('Bearer ', '')
     
-    // Verify token to get user ID
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token)
+    // Extract user ID from JWT token
+    let userId: string | null = null
     
-    if (userError || !user) {
+    try {
+      // Decode token to get user ID from sub claim
+      const decoded = jwtDecode<{ sub: string }>(token)
+      userId = decoded.sub
+      
+      if (!userId) {
+        console.error('[WORKSPACES] No sub claim in token')
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      
+      console.log(`[WORKSPACES] ✅ Token decoded, user ID: ${userId}`)
+    } catch (err) {
+      console.error('[WORKSPACES] Token decode error:', err)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    console.log(`[WORKSPACES] Fetching workspaces for user: ${userId}`)
 
     // Get workspaces where user is a member (using service role, no RLS restrictions)
     const { data: memberships, error: membershipsError } = await supabase
       .from('workspace_members')
       .select('workspace_id')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
 
     if (membershipsError) {
-      console.error('[API] Memberships error:', membershipsError)
+      console.error('[WORKSPACES] Memberships error:', membershipsError)
       return NextResponse.json({ error: membershipsError.message }, { status: 400 })
     }
 
+    console.log(`[WORKSPACES] Found ${memberships?.length || 0} memberships`)
+
     if (!memberships || memberships.length === 0) {
+      console.warn(`[WORKSPACES] ⚠️ No memberships found for user ${userId}`)
       return NextResponse.json({ workspaces: [] })
     }
 
@@ -47,13 +66,14 @@ export async function GET(req: NextRequest) {
       .in('id', workspaceIds)
 
     if (workspacesError) {
-      console.error('[API] Workspaces error:', workspacesError)
+      console.error('[WORKSPACES] Workspaces error:', workspacesError)
       return NextResponse.json({ error: workspacesError.message }, { status: 400 })
     }
 
+    console.log(`[WORKSPACES] ✅ Returning ${workspaces?.length || 0} workspaces`)
     return NextResponse.json({ workspaces: workspaces || [] })
   } catch (error) {
-    console.error('[API] Workspaces route error:', error)
+    console.error('[WORKSPACES] Fatal error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

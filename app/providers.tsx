@@ -1,9 +1,10 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, useRef } from 'react'
 import { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { useAppStore, User, Workspace, WorkspaceMember } from '@/lib/store'
+import { toast } from 'sonner'
 
 interface AuthContextType {
   session: Session | null
@@ -24,7 +25,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
   const [activeWorkspace, setActiveWorkspaceState] = useState<Workspace | null>(null)
-  const [loading, setLoading] = useState(false) // Start as false to avoid infinite loading
+  const [loading, setLoading] = useState(false)
+  const [workspacesLoading, setWorkspacesLoading] = useState(false)
+  
+  // Track bootstrap state to prevent multiple calls
+  const bootstrapInProgressRef = useRef<string | null>(null)
+  const bootstrapCompletedRef = useRef<Set<string>>(new Set())
 
   const storeSetUser = useAppStore((state) => state.setUser)
   const storeSetActiveWorkspace = useAppStore((state) => state.setActiveWorkspace)
@@ -36,64 +42,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('[AUTH] State changed:', event, session?.user?.id)
-
-        if (isMounted) {
-          setSession(session)
-        }
-
-        if (session?.user) {
-          // Immediately mark loading as false once we have a session
+        if (event === 'SIGNED_OUT') {
+          console.log('[AUTH] User signed out')
           if (isMounted) {
-            setLoading(false)
-          }
-
-          // Load user data in background (don't block on this)
-          try {
-            // Get auth token for API calls
-            const { data: { session: currentSession } } = await supabase.auth.getSession()
-            const token = currentSession?.access_token
-
-            // Fetch profile
-            const { data: profileData, error: profileError } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', session.user.id)
-              .single()
-
-            if (isMounted && !profileError && profileData) {
-              setUser(profileData)
-              storeSetUser(profileData)
-            }
-
-            // Fetch workspaces
-            if (token && isMounted) {
-              const response = await fetch('/api/auth/workspaces', {
-                headers: { 'Authorization': `Bearer ${token}` },
-              })
-
-              if (response.ok) {
-                const { workspaces } = await response.json()
-                if (isMounted && workspaces && workspaces.length > 0) {
-                  setWorkspaces(workspaces)
-                  const owned = workspaces.find((w: Workspace) => w.owner_id === session.user.id) || workspaces[0]
-                  setActiveWorkspaceState(owned)
-                  storeSetActiveWorkspace(owned)
-                }
-              }
-            }
-          } catch (error) {
-            console.error('[AUTH] Error loading user data:', error)
-          }
-        } else {
-          // No session
-          if (isMounted) {
+            setSession(null)
             setUser(null)
             setWorkspaces([])
             setActiveWorkspaceState(null)
             storeSetUser(null)
             storeSetActiveWorkspace(null)
-            setLoading(false)
+            bootstrapInProgressRef.current = null
+          }
+          return
+        }
+
+        if (session?.user && isMounted) {
+          console.log('[AUTH] Session established for user:', session.user.id)
+          setSession(session)
+
+          // Load profile
+          try {
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', session.user.id)
+              .single()
+
+            if (isMounted && profileData) {
+              setUser(profileData)
+              storeSetUser(profileData)
+            }
+          } catch (error) {
+            console.error('[AUTH] Error loading profile:', error)
           }
         }
       }
@@ -103,41 +83,173 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isMounted = false
       authListener?.subscription.unsubscribe()
     }
-  }, [])
+  }, [storeSetUser, storeSetActiveWorkspace])
+
+  // Load workspaces after session is established
+  useEffect(() => {
+    if (!session?.user) return
+
+    let isMounted = true
+
+    const loadWorkspaces = async () => {
+      try {
+        setWorkspacesLoading(true)
+        const { data: { session: currentSession } } = await supabase.auth.getSession()
+        const token = currentSession?.access_token
+
+        if (!token || !isMounted) return
+
+        const response = await fetch('/api/auth/workspaces', {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: AbortSignal.timeout(20000), // 20 second timeout
+        })
+
+        if (!response.ok) {
+          console.error('[AUTH] Failed to load workspaces:', response.status)
+          if (isMounted) {
+            setWorkspacesLoading(false)
+          }
+          return
+        }
+
+        if (!isMounted) return
+
+        const { workspaces } = await response.json()
+        console.log('[AUTH] Workspaces response:', workspaces?.length || 0)
+        
+        if (workspaces && workspaces.length > 0) {
+          setWorkspaces(workspaces)
+          const owned = workspaces.find((w: Workspace) => w.owner_id === session.user.id) || workspaces[0]
+          setActiveWorkspaceState(owned)
+          storeSetActiveWorkspace(owned)
+          console.log('[AUTH] ✅ Workspaces loaded successfully:', workspaces.length)
+        } else {
+          console.warn('[AUTH] ⚠️ No workspaces returned from API')
+          setWorkspaces([])
+        }
+      } catch (error) {
+        console.error('[AUTH] Error loading workspaces:', error)
+        if (isMounted) {
+          setWorkspaces([])
+        }
+      } finally {
+        if (isMounted) {
+          setWorkspacesLoading(false)
+        }
+      }
+    }
+
+    loadWorkspaces()
+
+    return () => {
+      isMounted = false
+    }
+  }, [session?.user, storeSetActiveWorkspace])
 
   const signIn = async (email: string, password: string) => {
-    console.log('[AUTH] Attempting sign in...')
-    
+    console.log('[AUTH] Sign in attempt for:', email)
+
     try {
-      const signInPromise = supabase.auth.signInWithPassword({
+      setLoading(true)
+      
+      // Sign in
+      const { error, data } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
-      // Add 15 second timeout
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(
-          () => reject(new Error('Sign in timeout - please check your connection')),
-          15000
-        )
-      )
-
-      const { error } = await Promise.race([signInPromise, timeoutPromise]) as any
-      
       if (error) {
-        console.error('[AUTH] Sign in error:', error)
+        console.error('[AUTH] Sign in failed:', error.message)
         throw error
       }
-      
-      console.log('[AUTH] Sign in successful')
+
+      if (!data.user?.id) {
+        throw new Error('Sign in succeeded but no user returned')
+      }
+
+      const userId = data.user.id
+
+      // Prevent multiple bootstrap calls for same user
+      if (bootstrapInProgressRef.current === userId) {
+        console.log('[AUTH] Bootstrap already in progress for:', userId)
+        return
+      }
+
+      // If already completed for this user in this session, skip bootstrap
+      if (bootstrapCompletedRef.current.has(userId)) {
+        console.log('[AUTH] Bootstrap already completed for:', userId)
+        return
+      }
+
+      bootstrapInProgressRef.current = userId
+      console.log('[AUTH] Sign in successful, user:', userId)
+
+      // Bootstrap workspace (server-side) with retry logic
+      let bootstrapSuccess = false
+      let retries = 0
+      const maxRetries = 3
+
+      while (!bootstrapSuccess && retries < maxRetries) {
+        try {
+          const { data: { session: currentSession } } = await supabase.auth.getSession()
+          const token = currentSession?.access_token
+
+          if (!token) {
+            throw new Error('No access token after sign in')
+          }
+
+          console.log(`[AUTH] Calling bootstrap endpoint (attempt ${retries + 1}/${maxRetries})...`)
+          const bootstrapResponse = await fetch('/api/bootstrap', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            signal: AbortSignal.timeout(20000), // 20 second timeout
+          })
+
+          if (!bootstrapResponse.ok) {
+            const errorData = await bootstrapResponse.json()
+            throw new Error(
+              errorData.details || errorData.error || `Bootstrap failed (${bootstrapResponse.status})`
+            )
+          }
+
+          const bootstrapData = await bootstrapResponse.json()
+          console.log('[AUTH] ✅ Bootstrap success:', bootstrapData.workspace_id)
+          bootstrapSuccess = true
+          bootstrapCompletedRef.current.add(userId)
+
+          // Wait briefly for workspaces endpoint to be updated
+          await new Promise((resolve) => setTimeout(resolve, 500))
+        } catch (bootstrapError) {
+          retries++
+          const errorMsg = bootstrapError instanceof Error ? bootstrapError.message : String(bootstrapError)
+          console.warn(`[AUTH] Bootstrap attempt ${retries} failed:`, errorMsg)
+
+          if (retries < maxRetries) {
+            // Wait before retry (exponential backoff)
+            await new Promise((resolve) => setTimeout(resolve, 500 * retries))
+          }
+        }
+      }
+
+      if (!bootstrapSuccess) {
+        console.warn('[AUTH] Bootstrap failed after retries, workspaces will load from API')
+        // Don't fail login - workspace might already exist, or will be loaded by workspaces endpoint
+      }
     } catch (err) {
-      console.error('[AUTH] Sign in failed:', err)
+      console.error('[AUTH] Sign in error:', err instanceof Error ? err.message : err)
       throw err
+    } finally {
+      bootstrapInProgressRef.current = null
+      setLoading(false)
     }
   }
 
   const signUp = async (email: string, password: string, fullName: string) => {
-    // 1. Create user via Supabase Auth
+    // Only create auth account
+    // Workspace will be created on first login (post-email confirmation)
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -147,46 +259,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
       },
     })
+
     if (error) throw error
 
-    // 2. Create workspace and workspace member (onboarding)
-    if (data.user) {
-      try {
-        const response = await fetch('/api/auth/onboard', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            userId: data.user.id,
-            email: data.user.email,
-            fullName: fullName,
-          }),
-        })
-
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(
-            errorData.details || errorData.error || 'Failed to create workspace'
-          )
-        }
-
-        const onboardData = await response.json()
-        if (!onboardData.success) {
-          throw new Error('Workspace creation returned false')
-        }
-      } catch (onboardError) {
-        // Log the error but don't fail signup - user can manually create workspace
-        console.error('Onboarding error:', onboardError)
-        throw new Error(
-          `Account created successfully, but automatic workspace setup failed. Please try again or contact support. Details: ${onboardError instanceof Error ? onboardError.message : 'Unknown error'}`
-        )
-      }
-    }
+    console.log('[AUTH] Signup successful, user needs to confirm email')
   }
 
   const signOut = async () => {
-    console.log('Signing out...')
+    console.log('[AUTH] Signing out...')
     
     // Clear local state immediately
     setSession(null)
@@ -196,11 +276,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     storeSetUser(null)
     storeSetActiveWorkspace(null)
     
+    // Reset bootstrap tracking
+    bootstrapInProgressRef.current = null
+    bootstrapCompletedRef.current.clear()
+    
     try {
       await supabase.auth.signOut()
-      console.log('Sign out successful')
+      console.log('[AUTH] Sign out successful')
     } catch (error) {
-      console.error('Sign out error:', error)
+      console.error('[AUTH] Sign out error:', error)
     }
   }
 

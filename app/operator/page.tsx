@@ -18,14 +18,20 @@ export default function OperatorPage() {
   const [pageLoading, setPageLoading] = useState(true)
   const [error, setError] = useState('')
 
-  // Protect route
+  // Protect route - redirect if no session
   useEffect(() => {
     if (!loading && !session) {
+      console.log('[OPERATOR] No session, redirecting to login')
       router.replace('/auth/login')
-    } else if (!loading) {
-      setPageLoading(false)
     }
   }, [session, loading, router])
+
+  // Hide loading once session is confirmed
+  useEffect(() => {
+    if (!loading) {
+      setPageLoading(false)
+    }
+  }, [loading])
 
   useEffect(() => {
     if (!activeWorkspace) return
@@ -117,16 +123,51 @@ export default function OperatorPage() {
 
   if (!session) return null
 
+  // Show loading skeleton while workspace is loading
+  if (pageLoading && !activeWorkspace) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block p-3 mb-4">
+            <div className="w-12 h-12 border-4 border-[#7C6FD8] border-t-transparent rounded-full animate-spin" />
+          </div>
+          <p className="text-gray-400 mb-1">Preparando workspace...</p>
+          <p className="text-sm text-gray-500">Esto puede tomar unos segundos</p>
+        </div>
+      </div>
+    )
+  }
+
+  // No workspace found after loading
   if (!activeWorkspace) {
     return (
-      <>
-        <div className="flex h-full items-center justify-center">
-          <div className="text-center">
-            <p className="text-gray-400 mb-4">No hay espacio de trabajo seleccionado</p>
-            <p className="text-sm text-gray-500">Selecciona uno en el menú lateral</p>
+      <div className="flex h-full items-center justify-center">
+        <div className="text-center max-w-md">
+          <div className="inline-block p-3 bg-red-900/20 border border-red-800 rounded-full mb-4">
+            <svg className="w-8 h-8 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <p className="text-gray-300 mb-2 font-medium text-lg">No se pudo cargar el workspace</p>
+          <p className="text-sm text-gray-400 mb-4">
+            Estamos trabajando en preparar tu espacio. Por favor intenta recargar la página.
+          </p>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => window.location.reload()}
+              className="inline-block bg-[#7C6FD8] hover:bg-[#6C5FC8] text-white font-medium py-2 px-6 rounded transition-colors"
+            >
+              Recargar
+            </button>
+            <button
+              onClick={() => router.push('/auth/login')}
+              className="inline-block bg-[#333] hover:bg-[#444] text-white font-medium py-2 px-6 rounded transition-colors"
+            >
+              Volver a Login
+            </button>
           </div>
         </div>
-      </>
+      </div>
     )
   }
 

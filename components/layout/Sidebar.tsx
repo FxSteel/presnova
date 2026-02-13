@@ -58,35 +58,35 @@ export default function Sidebar() {
   return (
     <div className="w-64 bg-[#1a1a1a] border-r border-[#333] flex flex-col overflow-hidden">
       {/* Workspace Switcher */}
-      <div className="p-4 border-b border-[#333] relative" ref={workspaceMenuRef}>
+      <div className="p-3 border-b border-[#333] relative" ref={workspaceMenuRef}>
         <button
           onClick={() => setShowWorkspaceMenu(!showWorkspaceMenu)}
-          className="w-full flex items-center justify-between p-3 bg-[#2a2a2a] hover:bg-[#333] rounded-lg transition-colors group"
+          className="w-full flex items-center justify-between p-2 bg-[#2a2a2a] hover:bg-[#333] rounded-md transition-colors group"
         >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-[#7C6FD8] rounded-lg flex items-center justify-center">
-              <span className="text-white text-sm font-bold">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-7 h-7 bg-[#7C6FD8] rounded-md flex items-center justify-center flex-shrink-0">
+              <span className="text-white text-xs font-bold">
                 {activeWorkspace?.name?.charAt(0) || 'W'}
               </span>
             </div>
-            <div className="text-left">
-              <p className="text-gray-200 text-sm font-medium truncate">
+            <div className="text-left min-w-0">
+              <p className="text-gray-200 text-xs font-medium truncate">
                 {activeWorkspace?.name || 'Loading...'}
               </p>
-              <p className="text-gray-500 text-xs capitalize">
+              <p className="text-gray-500 text-[10px] capitalize truncate">
                 {activeWorkspace?.role || ''}
               </p>
             </div>
           </div>
-          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${
+          <ChevronDown className={`w-3 h-3 text-gray-400 transition-transform flex-shrink-0 ml-1 ${
             showWorkspaceMenu ? 'rotate-180' : ''
           }`} />
         </button>
 
         {/* Workspace Dropdown */}
         {showWorkspaceMenu && (
-          <div className="absolute top-full left-4 right-4 mt-2 bg-[#2a2a2a] border border-[#444] rounded-lg shadow-lg z-50">
-            <div className="p-2">
+          <div className="absolute top-full left-3 right-3 mt-2 bg-[#2a2a2a] border border-[#444] rounded-md shadow-lg z-50">
+            <div className="p-1.5">
               {workspaces.map((workspace) => (
                 <button
                   key={workspace.id}
@@ -94,30 +94,30 @@ export default function Sidebar() {
                     setActiveWorkspace(workspace.id)
                     setShowWorkspaceMenu(false)
                   }}
-                  className={`w-full flex items-center gap-3 p-2 rounded hover:bg-[#333] transition-colors ${
-                    workspace.id === activeWorkspace?.id ? 'bg-[#333]' : ''
+                  className={`w-full flex items-center gap-2 p-1.5 rounded text-xs hover:bg-[#333] transition-colors ${
+                    workspace.id === activeWorkspace?.id ? 'bg-[#7C6FD8]/20 border border-[#7C6FD8]/50' : ''
                   }`}
                 >
-                  <div className="w-6 h-6 bg-[#7C6FD8] rounded flex items-center justify-center">
-                    <span className="text-white text-xs font-bold">
+                  <div className="w-5 h-5 bg-[#7C6FD8] rounded flex items-center justify-center flex-shrink-0">
+                    <span className="text-white text-[9px] font-bold">
                       {workspace.name.charAt(0)}
                     </span>
                   </div>
-                  <div className="text-left">
-                    <p className="text-gray-200 text-sm truncate">{workspace.name}</p>
-                    <p className="text-gray-500 text-xs capitalize">{workspace.role}</p>
+                  <div className="text-left min-w-0">
+                    <p className="text-gray-200 text-xs truncate">{workspace.name}</p>
+                    <p className="text-gray-500 text-[9px] capitalize truncate">{workspace.role}</p>
                   </div>
                 </button>
               ))}
               
-              <hr className="border-[#444] my-2" />
+              <hr className="border-[#444] my-1.5" />
               
               <button
                 onClick={handleCreateWorkspace}
-                className="w-full flex items-center gap-3 p-2 rounded hover:bg-[#333] transition-colors text-[#7C6FD8]"
+                className="w-full flex items-center gap-2 p-1.5 rounded text-xs hover:bg-[#333] transition-colors text-[#7C6FD8]"
               >
-                <Plus className="w-4 h-4" />
-                <span className="text-sm">Crear workspace</span>
+                <Plus className="w-3 h-3 flex-shrink-0" />
+                <span className="text-xs">Crear workspace</span>
               </button>
             </div>
           </div>
@@ -146,23 +146,7 @@ export default function Sidebar() {
             </Link>
           )
         })}
-      </nav>
-
-      {/* Settings Link */}
-      <div className="p-4 border-t border-[#333]">
-        <Link href="/settings">
-          <button
-            className={`w-full flex items-center gap-3 px-4 py-2 rounded transition-colors text-sm ${
-              isActive('/settings')
-                ? 'bg-[#7C6FD8] text-white'
-                : 'text-gray-300 hover:bg-[#2a2a2a]'
-            }`}
-          >
-            <Settings size={18} />
-            Configuración
-          </button>
-        </Link>
-      </div>
+      </nav>      {/* Settings Link - Removed, available in user menu > Configuraciones */}
 
       {/* User Profile Box */}
       <div className="p-4 border-t border-[#333]">

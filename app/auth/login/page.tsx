@@ -82,7 +82,7 @@ export default function LoginPage() {
         }
 
         console.log('[LOGIN] Sign in successful, calling bootstrap...')
-        toast.loading('Preparando workspace...')
+        const bootstrapToastId = toast.loading('Preparando workspace...')
 
         // Call bootstrap endpoint to ensure profile + workspace exist
         try {
@@ -107,6 +107,8 @@ export default function LoginPage() {
           // Continue anyway
         }
 
+        // Dismiss the loading toast before showing success
+        toast.dismiss(bootstrapToastId)
         console.log('[LOGIN] ✅ Redirecting to home')
         toast.success('¡Bienvenido!')
         router.push('/')
@@ -123,86 +125,115 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-[#0f0f0f] flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">
-            {isSignUp ? 'Crear cuenta' : 'Iniciar sesión'}
-          </h1>
-          <p className="text-gray-400">
-            {isSignUp
-              ? 'Crea una nueva cuenta para comenzar'
-              : 'Ingresa tus credenciales para acceder'}
-          </p>
-        </div>
-
-        {error && (
-          <div className="bg-red-900/20 border border-red-800 rounded-lg p-4 mb-6">
-            <p className="text-red-200 text-sm">{error}</p>
+      <div className="w-full max-w-sm">
+        <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-8 shadow-xl">
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-2xl font-bold text-white mb-2">
+              {isSignUp ? 'Crear cuenta' : 'Iniciar sesión'}
+            </h1>
+            <p className="text-gray-400 text-sm">
+              {isSignUp
+                ? 'Crea una nueva cuenta para comenzar'
+                : 'Ingresa tus credenciales para acceder'}
+            </p>
           </div>
-        )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {isSignUp && (
+          {/* Error Message */}
+          {error && (
+            <div className="bg-red-900/20 border border-red-800 rounded-lg p-3 mb-6">
+              <p className="text-red-200 text-sm">{error}</p>
+            </div>
+          )}
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {isSignUp && (
+              <Field>
+                <FieldLabel htmlFor="fullName">Nombre completo</FieldLabel>
+                <Input
+                  id="fullName"
+                  type="text"
+                  placeholder="Juan Pérez"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  disabled={loading}
+                />
+              </Field>
+            )}
+
             <Field>
-              <FieldLabel htmlFor="fullName">Nombre completo</FieldLabel>
+              <FieldLabel htmlFor="email">Correo electrónico</FieldLabel>
               <Input
-                id="fullName"
-                type="text"
-                placeholder="Juan Pérez"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
+                id="email"
+                type="email"
+                placeholder="tu@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 disabled={loading}
               />
             </Field>
-          )}
 
-          <Field>
-            <FieldLabel htmlFor="email">Correo electrónico</FieldLabel>
-            <Input
-              id="email"
-              type="email"
-              placeholder="tu@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={loading}
-            />
-          </Field>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <FieldLabel htmlFor="password">Contraseña</FieldLabel>
+                {!isSignUp && (
+                  <button
+                    type="button"
+                    className="text-xs text-[#7C6FD8] hover:underline"
+                    disabled
+                  >
+                    ¿Olvidaste?
+                  </button>
+                )}
+              </div>
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+              />
+            </div>
 
-          <Field>
-            <FieldLabel htmlFor="password">Contraseña</FieldLabel>
-            <Input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={loading}
-            />
-          </Field>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-[#7C6FD8] hover:bg-[#6C5FC8] disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded transition-colors flex items-center justify-center gap-2"
-          >
-            {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-            {isSignUp ? 'Crear cuenta' : 'Iniciar sesión'}
-          </button>
-        </form>
-
-        <div className="mt-6 text-center">
-          <p className="text-gray-400 text-sm">
-            {isSignUp ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?'}
+            {/* Submit Button */}
             <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-[#7C6FD8] hover:bg-[#6C5FC8] disabled:bg-[#7C6FD8]/50 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded-md transition-colors flex items-center justify-center gap-2 mt-6"
+            >
+              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+              {isSignUp ? 'Crear cuenta' : 'Iniciar sesión'}
+            </button>
+          </form>
+
+          {/* Divider */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-[#333]"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-[#1a1a1a] text-gray-400">o</span>
+            </div>
+          </div>
+
+          {/* Toggle Link */}
+          <div className="text-center text-sm">
+            <span className="text-gray-400">
+              {isSignUp ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?'}
+            </span>
+            <button
+              type="button"
               onClick={() => {
                 setIsSignUp(!isSignUp)
                 setError('')
               }}
-              className="ml-2 text-[#7C6FD8] hover:underline font-medium"
+              className="ml-1.5 text-[#7C6FD8] hover:underline font-medium"
             >
               {isSignUp ? 'Inicia sesión' : 'Regístrate'}
             </button>
-          </p>
+          </div>
         </div>
       </div>
     </div>

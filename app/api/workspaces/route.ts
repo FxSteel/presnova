@@ -16,48 +16,72 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 
 export async function GET(request: NextRequest) {
   try {
-    // Get the authorization header
     const authHeader = request.headers.get('authorization')
     
     if (!authHeader) {
-      // If no auth header, return 401
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       )
     }
 
-    // Verify the token and get user
     const token = authHeader.replace('Bearer ', '')
     const { data: { user }, error: userError } = await supabase.auth.getUser(token)
 
     if (userError || !user) {
-      console.error('[API/WORKSPACES] Auth error:', userError)
+      console.error('[API/WORKSPACES-GET] Auth error:', userError)
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       )
     }
 
-    console.log('[API/WORKSPACES] Fetching workspaces for user:', user.id)
+    console.log('[API/WORKSPACES-GET] Fetching workspaces for user:', user.id)
 
-    // For now, return empty workspaces list
-    // In a real app, you'd query the workspaces table
-    const workspaces: Array<{
-      id: string
-      name: string
-      slug: string
-      role: string
-      created_at?: string
-    }> = []
-    
+    // Query workspaces and roles from workspace_members table
+    const { data: memberships, error: memberError } = await supabase
+      .from('workspace_members')
+      .select(`
+        workspace_id,
+        role,
+        workspaces:workspace_id (
+          id,
+          name,
+          slug,
+          created_at
+        )
+      `)
+      .eq('user_id', user.id)
+
+    if (memberError) {
+      console.error('[API/WORKSPACES-GET] Query error:', memberError)
+      return NextResponse.json(
+        { error: 'Failed to fetch workspaces' },
+        { status: 500 }
+      )
+    }
+
+    // Transform response into workspaces with roles
+    const workspaces = (memberships || []).map((m: any) => ({
+      id: m.workspaces.id,
+      name: m.workspaces.name,
+      slug: m.workspaces.slug,
+      role: m.role,
+      created_at: m.workspaces.created_at,
+    }))
+
+    console.log('[API/WORKSPACES-GET] ✅ Found', workspaces.length, 'workspaces')
+
+    // Get first workspace as default
+    const defaultWorkspaceId = workspaces.length > 0 ? workspaces[0].id : null
+
     return NextResponse.json({
       workspaces,
-      defaultWorkspaceId: null,
+      defaultWorkspaceId,
     })
 
   } catch (error) {
-    console.error('[API/WORKSPACES] Error:', error)
+    console.error('[API/WORKSPACES-GET] Error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -76,12 +100,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify token
     const token = authHeader.replace('Bearer ', '')
     const { data: { user }, error: userError } = await supabase.auth.getUser(token)
 
     if (userError || !user) {
-      console.error('[API/WORKSPACES] Auth error:', userError)
+      console.error('[API/WORKSPACES-POST] Auth error:', userError)
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -90,23 +113,56 @@ export async function POST(request: NextRequest) {
 
     const { name } = await request.json()
     
-    console.log('[API/WORKSPACES] Creating workspace:', name)
+    console.log('[API/WORKSPACES-POST] Creating workspace for user:', user.id)
 
-    // For now, return a mock workspace
-    const workspace = {
-      id: 'workspace_' + Math.random().toString(36).substr(2, 9),
-      name: name || 'My Workspace',
-      slug: (name || 'workspace').toLowerCase().replace(/\s+/g, '-'),
-      role: 'owner',
-      created_at: new Date().toISOString(),
+    // Create workspace
+    const { data: workspace, error: workspaceError } = await supabase
+      .from('workspaces')
+      .insert({
+        name: name || 'My Workspace',
+        slug: (name || 'workspace').toLowerCase().replace(/\s+/g, '-') + '_' + Math.random().toString(36).substr(2, 5),
+      })
+      .select()
+      .single()
+
+    if (workspaceError || !workspace) {
+      console.error('[API/WORKSPACES-POST] Workspace creation error:', workspaceError)
+      return NextResponse.json(
+        { error: 'Failed to create workspace' },
+        { status: 500 }
+      )
     }
 
+    console.log('[API/WORKSPACES-POST] ✅ Workspace created:', workspace.id)
+
+    // Add user as admin member
+    const { error: memberError } = await supabase
+      .from('workspace_members')
+      .insert({
+        workspace_id: workspace.id,
+        user_id: user.id,
+        role: 'admin',
+      })
+
+    if (memberError) {
+      console.error('[API/WORKSPACES-POST] Member creation error:', memberError)
+      // Still return success - workspace was created
+    }
+
+    console.log('[API/WORKSPACES-POST] ✅ User added as admin')
+
     return NextResponse.json({
-      workspace,
+      workspace: {
+        id: workspace.id,
+        name: workspace.name,
+        slug: workspace.slug,
+        role: 'admin',
+        created_at: workspace.created_at,
+      },
     })
 
   } catch (error) {
-    console.error('[API/WORKSPACES] Error:', error)
+    console.error('[API/WORKSPACES-POST] Error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

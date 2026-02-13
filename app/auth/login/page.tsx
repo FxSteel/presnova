@@ -60,7 +60,7 @@ export default function LoginPage() {
         return
       } else {
         console.log('[LOGIN] Starting sign in with:', email)
-        const { error: signInError } = await supabase.auth.signInWithPassword({
+        const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
         })
@@ -73,9 +73,42 @@ export default function LoginPage() {
           return
         }
 
-        console.log('[LOGIN] Sign in successful')
+        if (!authData?.session?.access_token) {
+          console.error('[LOGIN] No access token in response')
+          setError('Authentication failed: no token')
+          toast.error('Authentication failed')
+          setLoading(false)
+          return
+        }
+
+        console.log('[LOGIN] Sign in successful, calling bootstrap...')
+        toast.loading('Preparando workspace...')
+
+        // Call bootstrap endpoint to ensure profile + workspace exist
+        try {
+          const bootstrapResponse = await fetch('/api/bootstrap', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${authData.session.access_token}`,
+              'Content-Type': 'application/json',
+            },
+          })
+
+          if (!bootstrapResponse.ok) {
+            const errorData = await bootstrapResponse.json()
+            console.error('[LOGIN] Bootstrap error:', errorData)
+            // Continue anyway - workspace might already exist
+          } else {
+            const bootstrapData = await bootstrapResponse.json()
+            console.log('[LOGIN] ✅ Bootstrap complete:', bootstrapData)
+          }
+        } catch (err) {
+          console.error('[LOGIN] Bootstrap fetch error:', err)
+          // Continue anyway
+        }
+
+        console.log('[LOGIN] ✅ Redirecting to home')
         toast.success('¡Bienvenido!')
-        
         router.push('/')
         return
       }

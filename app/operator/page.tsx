@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAppStore, Song, SongSlide } from '@/lib/store'
-import { useWorkspaceStore } from '@/lib/workspace-store'
+import { useWorkspace } from '@/lib/workspace-context'
 import { supabase } from '@/lib/supabase'
 import SongsList from '@/components/operator/SongsList'
 import SongDetail from '@/components/operator/SongDetail'
@@ -11,20 +11,26 @@ import OutputPreview from '@/components/operator/OutputPreview'
 
 export default function OperatorPage() {
   const router = useRouter()
-  const { activeWorkspaceId } = useWorkspaceStore()
+  const { activeWorkspaceId, status } = useWorkspace()
   const { selectedSong, setSelectedSong } = useAppStore()
   const [songs, setSongs] = useState<Song[]>([])
   const [slides, setSlides] = useState<SongSlide[]>([])
   const [pageLoading, setPageLoading] = useState(true)
   const [error, setError] = useState('')
 
-  // Fetch songs when workspace changes
+  // Fetch songs when workspace is available
   useEffect(() => {
-    if (!activeWorkspaceId) return
+    // Only fetch if we have a workspace and status is OK
+    if (!activeWorkspaceId || status !== 'ready') {
+      setPageLoading(true)
+      return
+    }
 
     const fetchSongs = async () => {
       try {
         setPageLoading(true)
+        setError('')
+        
         const { data, error: err } = await supabase
           .from('songs')
           .select('*')
@@ -35,6 +41,7 @@ export default function OperatorPage() {
         if (err) throw err
         setSongs(data || [])
       } catch (err: any) {
+        console.error('[OPERATOR] Error loading songs:', err)
         setError(err.message || 'Error loading songs')
       } finally {
         setPageLoading(false)
@@ -42,7 +49,7 @@ export default function OperatorPage() {
     }
 
     fetchSongs()
-  }, [activeWorkspaceId])
+  }, [activeWorkspaceId, status])
 
   useEffect(() => {
     if (!selectedSong) {

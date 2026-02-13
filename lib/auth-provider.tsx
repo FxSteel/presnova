@@ -1,0 +1,107 @@
+'use client'
+
+import React, { createContext, useContext, useEffect, useState } from 'react'
+import { User, Session, AuthChangeEvent } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase'
+
+export interface AuthContextType {
+  user: User | null
+  session: Session | null
+  loading: boolean
+  signOut: () => Promise<void>
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
+
+interface AuthProviderProps {
+  children: React.ReactNode
+}
+
+export function AuthProvider({ children }: AuthProviderProps) {
+  const [user, setUser] = useState<User | null>(null)
+  const [session, setSession] = useState<Session | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  const supabase = createClient()
+
+  // Initialize auth state
+  useEffect(() => {
+    let isMounted = true
+
+    const initializeAuth = async () => {
+      try {
+        // Get initial session
+        const { data: { session: initialSession }, error } = await supabase.auth.getSession()
+        
+        if (error) {
+          console.error('[AUTH-PROVIDER] Error getting session:', error)
+        } else if (isMounted) {
+          setSession(initialSession)
+          setUser(initialSession?.user ?? null)
+        }
+      } catch (err) {
+        console.error('[AUTH-PROVIDER] Initialization error:', err)
+      } finally {
+        if (isMounted) {
+          setLoading(false)
+        }
+      }
+    }
+
+    initializeAuth()
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event: AuthChangeEvent, currentSession: Session | null) => {
+        if (!isMounted) return
+
+        console.log('[AUTH-PROVIDER] Auth state changed:', event)
+
+        setSession(currentSession)
+        setUser(currentSession?.user ?? null)
+
+        if (event === 'SIGNED_IN') {
+          console.log('[AUTH-PROVIDER] User signed in:', currentSession?.user?.id)
+        } else if (event === 'SIGNED_OUT') {
+          console.log('[AUTH-PROVIDER] User signed out')
+        }
+      }
+    )
+
+    return () => {
+      isMounted = false
+      subscription?.unsubscribe()
+    }
+  }, [supabase])
+
+  const signOut = async () => {
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) {
+        console.error('[AUTH-PROVIDER] Sign out error:', error)
+        throw error
+      }
+      // State will be updated by auth state change listener
+    } catch (err) {
+      console.error('[AUTH-PROVIDER] Sign out failed:', err)
+      throw err
+    }
+  }
+
+  const value: AuthContextType = {
+    user,
+    session,
+    loading,
+    signOut,
+  }
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+}
+
+export function useAuth(): AuthContextType {
+  const context = useContext(AuthContext)
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider')
+  }
+  return context
+}

@@ -5,14 +5,18 @@ import { useAuth } from '@/app/providers'
 import { useAppStore } from '@/lib/store'
 import { supabase } from '@/lib/supabase'
 
+import { useWorkspace } from '@/lib/workspace-context'
+
 export default function SettingsPage() {
-  const { activeWorkspace } = useAuth()
+  const { workspaces, activeWorkspaceId } = useWorkspace()
   const { theme, setTheme } = useAppStore()
   const [language, setLanguage] = useState('es')
   const [logoUrl, setLogoUrl] = useState('')
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
+
+  const activeWorkspace = workspaces.find(w => w.id === activeWorkspaceId)
 
   useEffect(() => {
     if (!activeWorkspace) return

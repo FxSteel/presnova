@@ -29,9 +29,9 @@ export function RootProviders({ children }: RootProvidersProps) {
  * Wrapper to safely access useAuth inside WorkspaceProvider
  */
 function WorkspaceProviderWrapper({ children }: { children: ReactNode }) {
-  const { user } = useAuth()
+  const { user, session } = useAuth()
   return (
-    <WorkspaceProvider user={user}>
+    <WorkspaceProvider user={user} session={session}>
       {children}
     </WorkspaceProvider>
   )

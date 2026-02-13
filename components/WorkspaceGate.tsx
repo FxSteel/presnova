@@ -8,11 +8,11 @@ interface WorkspaceGateProps {
 }
 
 export function WorkspaceGate({ children }: WorkspaceGateProps) {
-  const { user } = useAuth()
+  const { user, session } = useAuth()
 
   // Always render WorkspaceProvider, let it handle the user state
   return (
-    <WorkspaceProvider user={user}>
+    <WorkspaceProvider user={user} session={session}>
       {children}
     </WorkspaceProvider>
   )

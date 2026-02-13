@@ -11,12 +11,21 @@ interface WorkspaceBootstrapProps {
 
 export function WorkspaceBootstrap({ children }: WorkspaceBootstrapProps) {
   const { session, user } = useAuth()
-  const { status, activeWorkspaceId, workspaces, error } = useWorkspace()
+  const { status, activeWorkspaceId, workspaces, error, fetchWorkspaces } = useWorkspace()
   const didRunRef = useRef(false)
   const pathname = usePathname()
 
   // Only bootstrap when user actually needs workspace (not on login/auth pages)
   const needsWorkspace = session && user && !pathname.startsWith('/auth')
+
+  // Trigger workspace fetch when session is ready
+  useEffect(() => {
+    if (needsWorkspace && !didRunRef.current && status === 'idle') {
+      console.log('[WORKSPACE-BOOTSTRAP] Fetching workspaces for user:', user?.id)
+      didRunRef.current = true
+      fetchWorkspaces()
+    }
+  }, [needsWorkspace, status, user?.id, fetchWorkspaces])
 
   // Reset on session change
   useEffect(() => {

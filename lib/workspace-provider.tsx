@@ -34,9 +34,10 @@ const WorkspaceContext = createContext<WorkspaceState | null>(null)
 interface WorkspaceProviderProps {
   children: React.ReactNode
   user: User | null
+  session: any | null
 }
 
-export function WorkspaceProvider({ children, user }: WorkspaceProviderProps) {
+export function WorkspaceProvider({ children, user, session }: WorkspaceProviderProps) {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null)
   const [status, setStatus] = useState<WorkspaceState['status']>('idle')
@@ -62,8 +63,8 @@ export function WorkspaceProvider({ children, user }: WorkspaceProviderProps) {
   }, [activeWorkspaceId])
 
   const fetchWorkspaces = async (): Promise<void> => {
-    if (!user) {
-      console.log('[WORKSPACE-PROVIDER] No user, skipping fetch')
+    if (!user || !session?.access_token) {
+      console.log('[WORKSPACE-PROVIDER] No user or token, skipping fetch')
       return
     }
 
@@ -72,7 +73,12 @@ export function WorkspaceProvider({ children, user }: WorkspaceProviderProps) {
     setError(null)
 
     try {
-      const response = await fetch('/api/workspaces')
+      const response = await fetch('/api/workspaces', {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      })
       
       if (!response.ok) {
         if (response.status === 401) {

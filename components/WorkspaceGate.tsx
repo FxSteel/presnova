@@ -1,6 +1,5 @@
 'use client'
 
-import { useAuth } from '@/app/providers'
 import { WorkspaceProvider } from '@/lib/workspace-provider'
 
 interface WorkspaceGateProps {
@@ -8,11 +7,9 @@ interface WorkspaceGateProps {
 }
 
 export function WorkspaceGate({ children }: WorkspaceGateProps) {
-  const { user, session } = useAuth()
-
-  // Always render WorkspaceProvider, let it handle the user state
+  // WorkspaceProvider now gets user/session from useAuth internally
   return (
-    <WorkspaceProvider user={user} session={session}>
+    <WorkspaceProvider>
       {children}
     </WorkspaceProvider>
   )

@@ -18,21 +18,21 @@ export function WorkspaceBootstrap({ children }: WorkspaceBootstrapProps) {
   // Only bootstrap when user actually needs workspace (not on login/auth pages)
   const needsWorkspace = session && user && !pathname.startsWith('/auth')
 
-  // Trigger workspace fetch when session is ready
+  // Trigger workspace fetch ONCE when conditions are met
   useEffect(() => {
-    if (needsWorkspace && !didRunRef.current && status === 'idle') {
-      console.log('[WORKSPACE-BOOTSTRAP] Fetching workspaces for user:', user?.id)
-      didRunRef.current = true
-      fetchWorkspaces()
+    // Guard: only run if all conditions are true
+    if (!needsWorkspace || didRunRef.current || status !== 'idle') {
+      return
     }
-  }, [needsWorkspace, status, user?.id, fetchWorkspaces])
 
-  // Reset on session change
-  useEffect(() => {
-    if (!session) {
-      didRunRef.current = false
-    }
-  }, [session])
+    // Only run once per mount
+    console.log('[WORKSPACE-BOOTSTRAP] Fetching workspaces for user:', user?.id)
+    didRunRef.current = true
+    fetchWorkspaces()
+
+    // No dependency array - runs once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // If on auth pages, don't show workspace-related UI
   if (pathname.startsWith('/auth') || !needsWorkspace) {

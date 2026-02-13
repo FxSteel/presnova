@@ -173,8 +173,8 @@ export default function Sidebar() {
           >
             <CircleUser size={20} className="text-[#7C6FD8]" />
             <div className="flex-1 text-left min-w-0">
-              <div className="font-medium text-white text-sm truncate">{user?.full_name || user?.email}</div>
-              <div className="text-xs text-gray-400 truncate">{user?.role || 'user'}</div>
+              <div className="font-medium text-white text-sm truncate">{user?.user_metadata?.full_name || user?.email}</div>
+              <div className="text-xs text-gray-400 truncate">user</div>
             </div>
             <ChevronDown size={16} />
           </button>

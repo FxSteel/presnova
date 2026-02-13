@@ -19,17 +19,3 @@ export default function SettingsLayout({
     </WorkspaceGuard>
   )
 }
-
-  if (!session) {
-    return null
-  }
-
-  return (
-    <div className="flex h-screen bg-[#0f0f0f]">
-      <Sidebar />
-      <main className="flex-1 overflow-hidden">
-        {children}
-      </main>
-    </div>
-  )
-}

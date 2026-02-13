@@ -2,12 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useWorkspace } from '@/lib/workspace-context'
-import { switchActiveWorkspace } from '@/lib/workspace-bootstrap'
 import { Building2, Check, ChevronsUpDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export function WorkspaceSwitcher() {
-  const { activeWorkspaceId, workspaces, memberships, status } = useWorkspace()
+  const { activeWorkspaceId, workspaces, setActiveWorkspace, status } = useWorkspace()
   const [open, setOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -36,10 +35,9 @@ export function WorkspaceSwitcher() {
     }
   }, [open])
 
-  const handleSelect = async (workspaceId: string) => {
-    if (switchActiveWorkspace(workspaceId)) {
-      setOpen(false)
-    }
+  const handleSelect = (workspaceId: string) => {
+    setActiveWorkspace(workspaceId)
+    setOpen(false)
   }
 
   if (!mounted || status !== 'ready') {

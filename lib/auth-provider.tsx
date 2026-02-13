@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { User, Session, AuthChangeEvent } from '@supabase/supabase-js'
-import { createClient } from '@/lib/supabase'
+import { getSupabaseClient } from '@/lib/supabase/browser'
 
 export interface AuthContextType {
   user: User | null
@@ -22,14 +22,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const supabase = createClient()
-
-  // Initialize auth state
   useEffect(() => {
     let isMounted = true
 
     const initializeAuth = async () => {
       try {
+        const supabase = getSupabaseClient()
+        
         // Get initial session
         const { data: { session: initialSession }, error } = await supabase.auth.getSession()
         
@@ -38,6 +37,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         } else if (isMounted) {
           setSession(initialSession)
           setUser(initialSession?.user ?? null)
+          console.log('[AUTH-PROVIDER] ✅ Session initialized:', initialSession?.user?.id)
         }
       } catch (err) {
         console.error('[AUTH-PROVIDER] Initialization error:', err)
@@ -51,6 +51,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     initializeAuth()
 
     // Listen for auth changes
+    const supabase = getSupabaseClient()
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, currentSession: Session | null) => {
         if (!isMounted) return
@@ -72,16 +73,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
       isMounted = false
       subscription?.unsubscribe()
     }
-  }, [supabase])
+  }, [])
 
   const signOut = async () => {
     try {
+      const supabase = getSupabaseClient()
       const { error } = await supabase.auth.signOut()
       if (error) {
         console.error('[AUTH-PROVIDER] Sign out error:', error)
         throw error
       }
-      // State will be updated by auth state change listener
     } catch (err) {
       console.error('[AUTH-PROVIDER] Sign out failed:', err)
       throw err

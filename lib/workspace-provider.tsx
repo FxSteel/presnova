@@ -2,7 +2,8 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { User } from '@supabase/supabase-js'
-import { createClient } from '@/lib/supabase'
+import { getSupabaseClient } from '@/lib/supabase/browser'
+import { useAuth } from '@/lib/auth-provider'
 import { toast } from 'sonner'
 
 export type WorkspaceRole = 'owner' | 'admin' | 'member'
@@ -33,17 +34,16 @@ const WorkspaceContext = createContext<WorkspaceState | null>(null)
 
 interface WorkspaceProviderProps {
   children: React.ReactNode
-  user: User | null
-  session: any | null
 }
 
-export function WorkspaceProvider({ children, user, session }: WorkspaceProviderProps) {
+export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
+  const { user, session } = useAuth()
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null)
   const [status, setStatus] = useState<WorkspaceState['status']>('idle')
   const [error, setError] = useState<string | null>(null)
 
-  const supabase = createClient()
+  const supabase = getSupabaseClient()
 
   // Load active workspace from localStorage on mount
   useEffect(() => {

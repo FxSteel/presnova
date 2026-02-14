@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAppStore, Song, SongSlide } from '@/lib/store'
-import { useWorkspace } from '@/lib/workspace-context'
+import { useWorkspace } from '@/lib/workspace-provider'
 import { supabase } from '@/lib/supabase'
 import SongsList from '@/components/operator/SongsList'
 import SongDetail from '@/components/operator/SongDetail'

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import { useAuth } from '@/app/providers'
-import { useWorkspace } from '@/lib/workspace-context'
+import { useWorkspace } from '@/lib/workspace-provider'
 import { usePathname } from 'next/navigation'
 
 interface WorkspaceBootstrapProps {

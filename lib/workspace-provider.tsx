@@ -1,10 +1,7 @@
 'use client'
 
-import React, { createContext, useContext, useEffect, useState } from 'react'
-import { User } from '@supabase/supabase-js'
-import { getSupabaseClient } from '@/lib/supabase/browser'
+import React, { createContext, useContext, useState, useCallback, useRef } from 'react'
 import { useAuth } from '@/lib/auth-provider'
-import { toast } from 'sonner'
 
 export type WorkspaceRole = 'owner' | 'admin' | 'member'
 
@@ -13,21 +10,22 @@ export interface Workspace {
   name: string
   slug: string
   role: WorkspaceRole
-  created_at?: string
+  owner_id: string
 }
 
 export interface WorkspaceState {
   // State
-  workspaces: Workspace[]
-  activeWorkspaceId: string | null
+  workspace: Workspace | null
   status: 'idle' | 'loading' | 'ready' | 'error'
-  error: string | null
+  errorCode: string | null
+  
+  // Computed
+  activeWorkspaceId: string | null
   
   // Actions
-  fetchWorkspaces: () => Promise<void>
-  setActiveWorkspace: (workspaceId: string) => void
-  createWorkspace: (name?: string) => Promise<Workspace | null>
-  refreshWorkspaces: () => Promise<void>
+  setWorkspace: (workspace: Workspace) => void
+  clearWorkspace: () => void
+  loadWorkspace: () => Promise<Workspace | null>
 }
 
 const WorkspaceContext = createContext<WorkspaceState | null>(null)
@@ -37,146 +35,102 @@ interface WorkspaceProviderProps {
 }
 
 export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
-  const { user, session } = useAuth()
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([])
-  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null)
+  const { session } = useAuth()
+  const [workspace, setWorkspaceState] = useState<Workspace | null>(null)
   const [status, setStatus] = useState<WorkspaceState['status']>('idle')
-  const [error, setError] = useState<string | null>(null)
+  const [errorCode, setErrorCode] = useState<string | null>(null)
+  const loadingRef = useRef(false)
 
-  const supabase = getSupabaseClient()
-
-  // Load active workspace from localStorage on mount
-  useEffect(() => {
-    const saved = localStorage.getItem('activeWorkspaceId')
-    if (saved) {
-      setActiveWorkspaceId(saved)
-    }
+  const setWorkspace = useCallback((ws: Workspace) => {
+    setWorkspaceState(ws)
+    setStatus('ready')
+    setErrorCode(null)
+    localStorage.setItem('activeWorkspaceId', ws.id)
   }, [])
 
-  // Save active workspace to localStorage
-  useEffect(() => {
-    if (activeWorkspaceId) {
-      localStorage.setItem('activeWorkspaceId', activeWorkspaceId)
-    } else {
-      localStorage.removeItem('activeWorkspaceId')
-    }
-  }, [activeWorkspaceId])
+  const clearWorkspace = useCallback(() => {
+    setWorkspaceState(null)
+    setStatus('idle')
+    setErrorCode(null)
+    localStorage.removeItem('activeWorkspaceId')
+  }, [])
 
-  const fetchWorkspaces = async (): Promise<void> => {
-    if (!user || !session?.access_token) {
-      console.log('[WORKSPACE-PROVIDER] No user or token, skipping fetch')
-      return
+  /**
+   * Load workspace from API. Called explicitly:
+   * - After login (from login page)
+   * - On refresh of protected route (from guard)
+   */
+  const loadWorkspace = useCallback(async (): Promise<Workspace | null> => {
+    if (!session?.access_token) {
+      console.log('[WS] No session, cannot load workspace')
+      setStatus('error')
+      setErrorCode('NO_SESSION')
+      return null
     }
 
-    console.log('[WORKSPACE-PROVIDER] Fetching workspaces...')
-    setStatus('loading')
-    setError(null)
+    // If already loaded, return cached
+    if (workspace && status === 'ready') {
+      console.log('[WS] Already loaded, returning cached')
+      return workspace
+    }
+
+    // Guard against double calls (React Strict Mode)
+    if (loadingRef.current) {
+      console.log('[WS] Already loading, skipping')
+      return null
+    }
 
     try {
-      const response = await fetch('/api/workspaces', {
+      loadingRef.current = true
+      setStatus('loading')
+      setErrorCode(null)
+
+      console.log('[WS] Fetching workspace...')
+      const response = await fetch('/api/workspaces/active', {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
       })
-      
+
       if (!response.ok) {
-        if (response.status === 401) {
-          console.log('[WORKSPACE-PROVIDER] Not authenticated')
-          setStatus('idle')
-          return
-        }
-        throw new Error(`HTTP ${response.status}`)
+        const data = await response.json().catch(() => ({}))
+        const code = data.code || `HTTP_${response.status}`
+        console.error('[WS] Load failed:', code, data.error)
+        setStatus('error')
+        setErrorCode(code)
+        return null
       }
 
       const data = await response.json()
-      const fetchedWorkspaces = data.workspaces || []
-      const defaultId = data.defaultWorkspaceId
+      const ws = data.workspace as Workspace
 
-      console.log('[WORKSPACE-PROVIDER] Fetched', fetchedWorkspaces.length, 'workspaces')
-      
-      setWorkspaces(fetchedWorkspaces)
-      
-      // Set active workspace if none is set or current is not valid
-      if (!activeWorkspaceId && defaultId) {
-        setActiveWorkspaceId(defaultId)
-      } else if (activeWorkspaceId && !fetchedWorkspaces.find((w: Workspace) => w.id === activeWorkspaceId)) {
-        setActiveWorkspaceId(defaultId || null)
-      }
-
+      console.log('[WS] ✅ Loaded workspace:', ws.id, ws.name)
+      setWorkspaceState(ws)
       setStatus('ready')
-
+      setErrorCode(null)
+      localStorage.setItem('activeWorkspaceId', ws.id)
+      
+      return ws
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch workspaces'
-      console.error('[WORKSPACE-PROVIDER] Error:', errorMessage)
-      setError(errorMessage)
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      console.error('[WS] Load error:', message)
       setStatus('error')
-    }
-  }
-
-  const setActiveWorkspace = (workspaceId: string): void => {
-    console.log('[WORKSPACE-PROVIDER] Setting active workspace:', workspaceId)
-    setActiveWorkspaceId(workspaceId)
-  }
-
-  const createWorkspace = async (name?: string): Promise<Workspace | null> => {
-    if (!user) {
-      toast.error('Authentication required')
+      setErrorCode('FETCH_ERROR')
       return null
+    } finally {
+      loadingRef.current = false
     }
-
-    console.log('[WORKSPACE-PROVIDER] Creating workspace...')
-    
-    try {
-      const response = await fetch('/api/workspaces', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ name }),
-      })
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          toast.error('Authentication required')
-          return null
-        }
-        throw new Error(`HTTP ${response.status}`)
-      }
-
-      const data = await response.json()
-      const newWorkspace = data.workspace
-
-      console.log('[WORKSPACE-PROVIDER] ✅ Workspace created:', newWorkspace.id)
-      
-      // Add to current workspaces and set as active
-      setWorkspaces(prev => [newWorkspace, ...prev])
-      setActiveWorkspaceId(newWorkspace.id)
-      
-      toast.success(`Workspace "${newWorkspace.name}" created`)
-      return newWorkspace
-
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to create workspace'
-      console.error('[WORKSPACE-PROVIDER] Create error:', errorMessage)
-      toast.error('Failed to create workspace')
-      return null
-    }
-  }
-
-  const refreshWorkspaces = async (): Promise<void> => {
-    await fetchWorkspaces()
-  }
+  }, [session?.access_token, workspace, status])
 
   const contextValue: WorkspaceState = {
-    workspaces,
-    activeWorkspaceId,
+    workspace,
     status,
-    error,
-    fetchWorkspaces,
-    setActiveWorkspace,
-    createWorkspace,
-    refreshWorkspaces,
+    errorCode,
+    activeWorkspaceId: workspace?.id ?? null,
+    setWorkspace,
+    clearWorkspace,
+    loadWorkspace,
   }
 
   return (
@@ -196,6 +150,6 @@ export function useWorkspace(): WorkspaceState {
 
 // Helper hook to get current workspace
 export function useActiveWorkspace(): Workspace | null {
-  const { workspaces, activeWorkspaceId } = useWorkspace()
-  return workspaces.find(w => w.id === activeWorkspaceId) || null
+  const { workspace } = useWorkspace()
+  return workspace
 }

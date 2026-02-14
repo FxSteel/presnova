@@ -2,13 +2,14 @@
 
 import React, { ReactNode } from 'react'
 import { AuthProvider } from '@/lib/auth-provider'
+import { WorkspaceProvider } from '@/lib/workspace-provider'
 
 export { AuthProvider, useAuth } from '@/lib/auth-provider'
-export { useWorkspace } from '@/lib/workspace-context'
+export { useWorkspace, useActiveWorkspace } from '@/lib/workspace-provider'
 
 /**
  * Root provider component that wraps the entire app.
- * Only includes AuthProvider. WorkspaceProvider is only mounted in protected routes.
+ * Includes AuthProvider and WorkspaceProvider.
  */
 interface RootProvidersProps {
   children: ReactNode
@@ -17,7 +18,9 @@ interface RootProvidersProps {
 export function RootProviders({ children }: RootProvidersProps) {
   return (
     <AuthProvider>
-      {children}
+      <WorkspaceProvider>
+        {children}
+      </WorkspaceProvider>
     </AuthProvider>
   )
 }

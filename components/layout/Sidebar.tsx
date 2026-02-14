@@ -1,30 +1,24 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { useAuth } from '@/app/providers'
+import { useAuth } from '@/lib/auth-provider'
 import { useRouter, usePathname } from 'next/navigation'
-import { CircleUser, ChevronDown, Home, Users, Zap, Lightbulb, Settings, LogOut, Plus } from 'lucide-react'
+import { CircleUser, ChevronDown, Home, Users, Zap, Lightbulb, LogOut } from 'lucide-react'
 import Link from 'next/link'
-import { useWorkspace, useActiveWorkspace } from '@/lib/workspace-provider'
+import { useActiveWorkspace } from '@/lib/workspace-provider'
 
 export default function Sidebar() {
   const { user, signOut } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
   const [showUserMenu, setShowUserMenu] = useState(false)
-  const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false)
-  const workspaceMenuRef = useRef<HTMLDivElement>(null)
   const userMenuRef = useRef<HTMLDivElement>(null)
   
-  const { workspaces, setActiveWorkspace, createWorkspace } = useWorkspace()
   const activeWorkspace = useActiveWorkspace()
 
   // Close menus when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (workspaceMenuRef.current && !workspaceMenuRef.current.contains(event.target as Node)) {
-        setShowWorkspaceMenu(false)
-      }
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setShowUserMenu(false)
       }
@@ -40,11 +34,6 @@ export default function Sidebar() {
     router.replace('/auth/login')
   }
 
-  const handleCreateWorkspace = async () => {
-    setShowWorkspaceMenu(false)
-    await createWorkspace()
-  }
-
   const navItems = [
     { href: '/operator', label: 'Home', icon: Home, disabled: true },
     { href: '/operator', label: 'Operador', icon: Zap, disabled: false },
@@ -57,12 +46,9 @@ export default function Sidebar() {
 
   return (
     <div className="w-64 bg-[#1a1a1a] border-r border-[#333] flex flex-col overflow-hidden">
-      {/* Workspace Switcher */}
-      <div className="p-3 border-b border-[#333] relative" ref={workspaceMenuRef}>
-        <button
-          onClick={() => setShowWorkspaceMenu(!showWorkspaceMenu)}
-          className="w-full flex items-center justify-between p-2 bg-[#2a2a2a] hover:bg-[#333] rounded-md transition-colors group"
-        >
+      {/* Workspace Display */}
+      <div className="p-3 border-b border-[#333]">
+        <div className="w-full flex items-center justify-between p-2 bg-[#2a2a2a] rounded-md">
           <div className="flex items-center gap-2 min-w-0">
             <div className="w-7 h-7 bg-[#7C6FD8] rounded-md flex items-center justify-center flex-shrink-0">
               <span className="text-white text-xs font-bold">
@@ -71,57 +57,14 @@ export default function Sidebar() {
             </div>
             <div className="text-left min-w-0">
               <p className="text-gray-200 text-xs font-medium truncate">
-                {activeWorkspace?.name || 'Loading...'}
+                {activeWorkspace?.name || 'Sin workspace'}
               </p>
               <p className="text-gray-500 text-[10px] capitalize truncate">
                 {activeWorkspace?.role || ''}
               </p>
             </div>
           </div>
-          <ChevronDown className={`w-3 h-3 text-gray-400 transition-transform flex-shrink-0 ml-1 ${
-            showWorkspaceMenu ? 'rotate-180' : ''
-          }`} />
-        </button>
-
-        {/* Workspace Dropdown */}
-        {showWorkspaceMenu && (
-          <div className="absolute top-full left-3 right-3 mt-2 bg-[#2a2a2a] border border-[#444] rounded-md shadow-lg z-50">
-            <div className="p-1.5">
-              {workspaces.map((workspace) => (
-                <button
-                  key={workspace.id}
-                  onClick={() => {
-                    setActiveWorkspace(workspace.id)
-                    setShowWorkspaceMenu(false)
-                  }}
-                  className={`w-full flex items-center gap-2 p-1.5 rounded text-xs hover:bg-[#333] transition-colors ${
-                    workspace.id === activeWorkspace?.id ? 'bg-[#7C6FD8]/20 border border-[#7C6FD8]/50' : ''
-                  }`}
-                >
-                  <div className="w-5 h-5 bg-[#7C6FD8] rounded flex items-center justify-center flex-shrink-0">
-                    <span className="text-white text-[9px] font-bold">
-                      {workspace.name.charAt(0)}
-                    </span>
-                  </div>
-                  <div className="text-left min-w-0">
-                    <p className="text-gray-200 text-xs truncate">{workspace.name}</p>
-                    <p className="text-gray-500 text-[9px] capitalize truncate">{workspace.role}</p>
-                  </div>
-                </button>
-              ))}
-              
-              <hr className="border-[#444] my-1.5" />
-              
-              <button
-                onClick={handleCreateWorkspace}
-                className="w-full flex items-center gap-2 p-1.5 rounded text-xs hover:bg-[#333] transition-colors text-[#7C6FD8]"
-              >
-                <Plus className="w-3 h-3 flex-shrink-0" />
-                <span className="text-xs">Crear workspace</span>
-              </button>
-            </div>
-          </div>
-        )}
+        </div>
       </div>
 
       {/* Navigation */}
@@ -146,7 +89,7 @@ export default function Sidebar() {
             </Link>
           )
         })}
-      </nav>      {/* Settings Link - Removed, available in user menu > Configuraciones */}
+      </nav>
 
       {/* User Profile Box */}
       <div className="p-4 border-t border-[#333]">

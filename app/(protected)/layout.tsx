@@ -1,5 +1,4 @@
-import { WorkspaceBootstrap } from "@/components/WorkspaceBootstrap";
-import { WorkspaceProvider } from "@/lib/workspace-provider";
+import { WorkspaceGate } from "@/components/WorkspaceGate";
 
 export default function ProtectedLayout({
   children,
@@ -7,10 +6,8 @@ export default function ProtectedLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <WorkspaceProvider>
-      <WorkspaceBootstrap>
-        {children}
-      </WorkspaceBootstrap>
-    </WorkspaceProvider>
+    <WorkspaceGate>
+      {children}
+    </WorkspaceGate>
   );
 }

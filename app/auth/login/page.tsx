@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { getSupabaseClient } from '@/lib/supabase/browser'
+import { useWorkspace } from '@/lib/workspace-provider'
 import { Field, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Loader2 } from 'lucide-react'
@@ -17,6 +18,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const supabase = getSupabaseClient()
+  const { setWorkspace } = useWorkspace()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -81,10 +83,10 @@ export default function LoginPage() {
           return
         }
 
-        console.log('[LOGIN] Sign in successful, calling bootstrap...')
-        const bootstrapToastId = toast.loading('Preparando workspace...')
+        console.log('[LOGIN] Sign in successful, loading workspace...')
+        const toastId = toast.loading('Cargando datos del workspace...')
 
-        // Call bootstrap endpoint to ensure profile + workspace exist
+        // Step 1: Bootstrap (ensure profile + workspace exist)
         try {
           const bootstrapResponse = await fetch('/api/bootstrap', {
             method: 'POST',
@@ -94,24 +96,49 @@ export default function LoginPage() {
             },
           })
 
-          if (!bootstrapResponse.ok) {
-            const errorData = await bootstrapResponse.json()
-            console.error('[LOGIN] Bootstrap error:', errorData)
-            // Continue anyway - workspace might already exist
+          if (bootstrapResponse.ok) {
+            console.log('[LOGIN] ✅ Bootstrap complete')
           } else {
-            const bootstrapData = await bootstrapResponse.json()
-            console.log('[LOGIN] ✅ Bootstrap complete:', bootstrapData)
+            console.warn('[LOGIN] Bootstrap returned non-OK, continuing...')
           }
         } catch (err) {
-          console.error('[LOGIN] Bootstrap fetch error:', err)
-          // Continue anyway
+          console.warn('[LOGIN] Bootstrap error, continuing...', err)
         }
 
-        // Dismiss the loading toast before showing success
-        toast.dismiss(bootstrapToastId)
-        console.log('[LOGIN] ✅ Redirecting to home')
+        // Step 2: Load workspace from API
+        const wsResponse = await fetch('/api/workspaces/active', {
+          headers: {
+            'Authorization': `Bearer ${authData.session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+        })
+
+        if (!wsResponse.ok) {
+          const errorData = await wsResponse.json().catch(() => ({}))
+          toast.dismiss(toastId)
+          
+          if (errorData.code === 'NO_WORKSPACE') {
+            setError('Tu cuenta no tiene workspace asociado. Contacta soporte.')
+            toast.error('No se encontró workspace')
+          } else {
+            setError('Error cargando workspace')
+            toast.error('Error cargando workspace')
+          }
+          setLoading(false)
+          return
+        }
+
+        const wsData = await wsResponse.json()
+        const workspace = wsData.workspace
+        console.log('[LOGIN] ✅ Workspace loaded:', workspace.name)
+
+        // Save workspace to global state
+        setWorkspace(workspace)
+
+        // Navigate to dashboard
+        toast.dismiss(toastId)
         toast.success('¡Bienvenido!')
-        router.push('/')
+        router.push('/operator')
         return
       }
     } catch (err) {

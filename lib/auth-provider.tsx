@@ -37,7 +37,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         } else if (isMounted) {
           setSession(initialSession)
           setUser(initialSession?.user ?? null)
-          console.log('[AUTH-PROVIDER] ✅ Session initialized:', initialSession?.user?.id)
+          if (initialSession?.user?.id) {
+            console.log('[AUTH] session ok - user:', initialSession.user.id)
+          }
         }
       } catch (err) {
         console.error('[AUTH-PROVIDER] Initialization error:', err)
@@ -62,7 +64,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setUser(currentSession?.user ?? null)
 
         if (event === 'SIGNED_IN') {
-          console.log('[AUTH-PROVIDER] User signed in:', currentSession?.user?.id)
+          console.log('[AUTH] session ok - user:', currentSession?.user?.id)
         } else if (event === 'SIGNED_OUT') {
           console.log('[AUTH-PROVIDER] User signed out')
         }

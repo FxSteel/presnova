@@ -17,6 +17,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Nova - Song Operator",
   description: "Manage and operate songs with real-time collaboration",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({
